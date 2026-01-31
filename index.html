@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Heart Effect Menu</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+<style>
+body{
+  margin:0;
+  height:100vh;
+  background:linear-gradient(135deg,#1e1e2f,#2c3e50);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+  font-family:sans-serif;
+}
+
+/* Nút chính */
+.main-btn{
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  background:#ff4b5c;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:white;
+  font-size:28px;
+  cursor:pointer;
+  box-shadow:0 8px 20px rgba(0,0,0,0.3);
+  transition:transform 0.3s ease;
+  z-index:10;
+}
+.main-btn.active{ transform:rotate(45deg); }
+
+/* Menu */
+.menu{
+  position:absolute;
+  width:200px;
+  height:200px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.menu a{
+  position:absolute;
+  width:50px;
+  height:50px;
+  border-radius:50%;
+  background:white;
+  color:#333;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-decoration:none;
+  font-size:20px;
+  transition:all 0.4s ease;
+  transform:scale(0);
+  opacity:0;
+}
+.menu.open a{ transform:scale(1); opacity:1; }
+.menu.open a:nth-child(1){ transform:translate(-80px,-80px) scale(1); }
+
+/* Tim bay */
+.heart{
+  position:absolute;
+  color:#ff69b4;
+  animation:floatUp 2s linear forwards;
+  pointer-events:none;
+}
+@keyframes floatUp{
+  0%{ transform:translateY(0) scale(1); opacity:1; }
+  100%{ transform:translateY(-220px) scale(2) rotate(360deg); opacity:0; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="menu" id="menu">
+  <!-- LINK GẮN TRỰC TIẾP VÀO THẺ A (QUAN TRỌNG) -->
+  <a href="http://www.04091.site/BASIC?i=1" target="_blank" id="heartBtn">
+    <i class="fa-solid fa-heart"></i>
+  </a>
+</div>
+
+<div class="main-btn" id="mainBtn">
+  <i class="fa-solid fa-plus"></i>
+</div>
+
+<script>
+const mainBtn = document.getElementById("mainBtn");
+const menu = document.getElementById("menu");
+const heartBtn = document.getElementById("heartBtn");
+
+mainBtn.addEventListener("click", () => {
+  mainBtn.classList.toggle("active");
+  menu.classList.toggle("open");
+});
+
+// 💖 Chỉ tạo hiệu ứng, KHÔNG điều hướng bằng JS
+heartBtn.addEventListener("click", () => {
+  for(let i=0;i<15;i++){
+    const heart = document.createElement("div");
+    heart.classList.add("heart");
+    heart.innerHTML = "❤";
+    heart.style.left = (window.innerWidth/2 + (Math.random()*160-80)) + "px";
+    heart.style.top = (window.innerHeight/2 + (Math.random()*70)) + "px";
+    heart.style.fontSize = (Math.random()*20+15) + "px";
+    document.body.appendChild(heart);
+    setTimeout(()=>heart.remove(),2000);
+  }
+});
+</script>
+
+</body>
+</html>
