@@ -23,6 +23,8 @@ button{background:#4facfe;color:white;font-weight:bold;}
 .dot{width:18px;height:18px;border-radius:50%;background:#ddd;}
 .dayNum{font-size:10px;margin-top:2px;color:#555;}
 .dayDetail{margin-top:10px;background:white;padding:8px;border-radius:8px;}
+.historyItem{background:#fff;padding:8px;border-radius:8px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;}
+.deleteBtn{background:#ff4d4d;border:none;color:white;border-radius:50%;width:26px;height:26px;}
 </style>
 </head>
 
@@ -32,13 +34,16 @@ button{background:#4facfe;color:white;font-weight:bold;}
 
 <div class="dayBar">
 <span onclick="changeDay(-1)">◀</span>
-<input type="date" id="runDate">
+<input type="date" id="runDate" onchange="loadDayData()">
 <span onclick="changeDay(1)">▶</span>
 </div>
 
 <input type="number" id="km" placeholder="Số km">
 <input type="number" id="minutes" placeholder="Số phút chạy">
 <button onclick="saveRun()">Lưu</button>
+
+<button onclick="toggleSection('historyBox')">📜 Xem lịch sử đã nhập</button>
+<div class="sectionBox sectionContent" id="historyBox"></div>
 
 <div class="monthNav">
 <span onclick="changeMonth(-1)">◀</span>
@@ -83,7 +88,7 @@ button{background:#4facfe;color:white;font-weight:bold;}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, set, get, remove, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -99,9 +104,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
-const ALLOWED_EMAIL = "15102002@gmail.com";
+const ALLOWED_EMAIL="15102002@gmail.com";
 
-document.body.insertAdjacentHTML("afterbegin", `
+document.body.insertAdjacentHTML("afterbegin",`
 <div id="loginBox" style="position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;z-index:9999">
 <div style="background:white;padding:20px;border-radius:12px;box-shadow:0 10px 20px rgba(0,0,0,.2);width:280px">
 <h3>Đăng nhập</h3>
@@ -109,34 +114,34 @@ document.body.insertAdjacentHTML("afterbegin", `
 <input id="password" type="password" placeholder="Password">
 <button id="loginBtn">Login</button>
 <p id="loginMsg" style="color:red;font-size:13px"></p>
-</div></div>
-`);
+</div></div>`);
 
-loginBtn.onclick = async () => {
-  try { await signInWithEmailAndPassword(auth, email.value, password.value); }
-  catch { loginMsg.innerText="Sai tài khoản hoặc mật khẩu"; }
-};
-
-onAuthStateChanged(auth, user => {
-  if(user){
-    if(user.email!==ALLOWED_EMAIL){ alert("Không có quyền truy cập!"); signOut(auth); return; }
-    loginBox.style.display="none";
-    loadAllRuns();
-  }
-});
+loginBtn.onclick=async()=>{try{await signInWithEmailAndPassword(auth,email.value,password.value);}catch{loginMsg.innerText="Sai tài khoản hoặc mật khẩu";}};
+onAuthStateChanged(auth,user=>{if(user){if(user.email!==ALLOWED_EMAIL){alert("Không có quyền");signOut(auth);return;}loginBox.style.display="none";loadAllRuns();}});
 
 let currentMonth=new Date().getMonth();
 let currentYear=new Date().getFullYear();
-let allRuns={}; let chart;
+let allRuns={};let chart;
 runDate.value=new Date().toISOString().split('T')[0];
 
-function toggleSection(id){const el=document.getElementById(id);el.style.display=el.style.display==="none"?"block":"none";if(id==="chartContent") setTimeout(drawChart,200);}
-function changeDay(s){const d=new Date(runDate.value);d.setDate(d.getDate()+s);runDate.value=d.toISOString().split('T')[0];}
+function toggleSection(id){const el=document.getElementById(id);el.style.display=el.style.display==="none"?"block":"none";}
+function changeDay(s){const d=new Date(runDate.value);d.setDate(d.getDate()+s);runDate.value=d.toISOString().split('T')[0];loadDayData();}
 function changeMonth(s){currentMonth+=s;if(currentMonth<0){currentMonth=11;currentYear--;}if(currentMonth>11){currentMonth=0;currentYear++;}updateUI();}
 
-async function saveRun(){await set(ref(db,'runs/'+runDate.value),{km:parseFloat(km.value),minutes:parseInt(minutes.value)});loadAllRuns();}
-async function loadAllRuns(){const snap=await get(child(ref(db),'runs'));allRuns=snap.exists()?snap.val():{};updateUI();}
-async function saveGoal(){await set(ref(db,'goals/'+currentYear+'-'+(currentMonth+1)),parseFloat(goalInput.value));updateUI();}
+async function saveRun(){await set(ref(db,'runs/'+runDate.value),{km:+km.value,minutes:+minutes.value});loadAllRuns();}
+async function loadAllRuns(){const snap=await get(child(ref(db),'runs'));allRuns=snap.exists()?snap.val():{};updateUI();loadDayData();renderHistory();}
+async function deleteRun(date){await remove(ref(db,'runs/'+date));loadAllRuns();}
+
+function loadDayData(){const r=allRuns[runDate.value];km.value=r?r.km:"";minutes.value=r?r.minutes:"";}
+
+function renderHistory(){
+historyBox.innerHTML="";
+Object.entries(allRuns).sort().reverse().forEach(([date,r])=>{
+historyBox.innerHTML+=`<div class="historyItem">${date} - ${r.km}km - ${r.minutes}p <button class="deleteBtn" onclick="deleteRun('${date}')">X</button></div>`;
+});
+}
+
+async function saveGoal(){await set(ref(db,'goals/'+currentYear+'-'+(currentMonth+1)),+goalInput.value);updateUI();}
 async function getGoal(){const snap=await get(child(ref(db),'goals/'+currentYear+'-'+(currentMonth+1)));return snap.exists()?snap.val():0;}
 
 async function updateUI(){
@@ -146,7 +151,10 @@ let total=0;
 Object.entries(allRuns).forEach(([d,r])=>{if(d.startsWith(`${currentYear}-${String(currentMonth+1).padStart(2,'0')}`)) total+=r.km;});
 goalSummary.innerText=goal?goal+" km":"Chưa đặt";
 progressBar.style.width=goal?Math.min(100,(total/goal)*100)+"%":"0%";
+drawDots();drawChart();
+}
 
+function drawDots(){
 dots.innerHTML="";
 const days=new Date(currentYear,currentMonth+1,0).getDate();
 for(let d=1;d<=days;d++){
@@ -167,9 +175,11 @@ for(let d=1;d<=days;d++){
 const dateStr=`${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 labels.push(d);data.push(allRuns[dateStr]?allRuns[dateStr].km:0);
 }
-if(chart) chart.destroy();
+if(chart)chart.destroy();
 chart=new Chart(runChart,{type:'bar',data:{labels,datasets:[{data,backgroundColor:'#4facfe'}]},options:{plugins:{legend:{display:false}}}});
 }
+
+window.deleteRun=deleteRun;
 </script>
 </body>
 </html>
